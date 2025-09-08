@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 动态favicon -->
+    <link rel="icon" href="" type="image/x-icon" id="dynamic-favicon">
+    <title id="dynamic-title">Merge Game</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 通用图片保护样式 */
+        img,iframe {
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .game-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            max-width: 100vw;
+            max-height: 100vh;
+        }
+
+        #game-frame {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+        }
+
+        /* 水果素材展示区域 */
+        .fruit-materials {
+            position: absolute;
+            top: 0;
+            left: -10px;
+            transform: translateX(-100%);
+            height: 100%;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-rows: repeat(11, 1fr);
+            gap: 12px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            max-height: 667px;
+            overflow-y: auto;
+        }
+
+        .fruit-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden; 
+            border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .fruit-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            /* 防止图片被拖动、下载、右键菜单等 */
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        .fruit-image:hover {
+            transform: scale(1.1);
+        }
+
+        /* 水果滤镜效果 */
+        .fruit-gray {
+            filter: grayscale(100%);
+            transition: filter 0.5s ease-in-out;
+        }
+
+
+        /* 当屏幕宽度大于等于500px时，应用PC端样式 */
+        @media (min-width: 500px) {
+            #game-frame {
+                width: 375px;
+                height: 667px;
+                max-height: 95vh; /* 确保iframe在垂直方向上不会超出屏幕 */
+                border-radius: 20px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .game-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .fruit-materials {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+                grid-template-rows: none;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 10px;
+            }
+            
+            .fruit-image {
+                width: 100%;
+                height: 100%;
+            }
+            
+        }
+
+        @media (max-width: 480px) {
+            .fruit-materials {
+                display: none; /* 在小屏幕上隐藏素材区域 */
+            }
+        }
+
+        /* 角色解锁展示效果样式 */
+        .unlock-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .unlock-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .unlock-content {
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            text-align: center;
+            box-shadow: none;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+
+        /* 8条放射光线 */
+        .rays {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300vw; /* 超过视口 */
+            height: 300vh;
+            background: repeating-conic-gradient(
+                white 0deg 22.5deg,
+                transparent 22.5deg 45deg
+            );
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            animation: spin 8s linear infinite;
+            opacity: 0.4;
+            z-index: 0;
+        }
+
+
+        .unlock-overlay.show .unlock-content {
+            transform: scale(1);
+        }
+
+        .unlock-fruit-image {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            border-radius: 50%;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            margin: 0;
+            animation: bounceIn 0.6s ease;
+            position: relative;
+            z-index: 2;
+            /* 防止图片被拖动、下载、右键菜单等 */
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.8;
+            }
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .unlock-fruit-image {
+                width: 120px;
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <iframe id="game-frame" src="index-iframe.html"></iframe>
+        
+        <!-- 水果素材展示区域 -->
+        <div class="fruit-materials">
+            <div class="fruit-item" id="fruit-0">
+                <img src="res/assets-online/1.png" alt="item_1" class="fruit-image">
+            </div>
+
+            <div class="fruit-item" id="fruit-1">
+                <img src="res/assets-online/2.png" alt="item_2" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-2">
+                <img src="res/assets-online/3.png" alt="item_3" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-3">
+                <img src="res/assets-online/4.png" alt="item_4" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-4">
+                <img src="res/assets-online/5.png" alt="item_5" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-5">
+                <img src="res/assets-online/6.png" alt="item_6" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-6">
+                <img src="res/assets-online/7.png" alt="item_7" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-7">
+                <img src="res/assets-online/8.png" alt="item_8" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-8">
+                <img src="res/assets-online/9.png" alt="item_9" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-9">
+                <img src="res/assets-online/10.png" alt="item_10" class="fruit-image fruit-gray">
+            </div>
+
+            <div class="fruit-item" id="fruit-10">
+                <img src="res/assets-online/11.png" alt="item_11" class="fruit-image fruit-gray">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 角色解锁展示效果 -->
+    <div class="unlock-overlay" id="unlockOverlay">
+        <div class="unlock-content">
+            <div class="rays"></div>
+            <img id="unlockFruitImage" src="" alt="" class="unlock-fruit-image">
+        </div>
+    </div>
+    
+    <script>
+        // 水果名称映射（与游戏中的顺序一致）
+        const fruitNames = ["葡萄", "樱桃", "草莓", "橘子", "柠檬", "猕猴桃", "菠萝", "椰子", "西瓜", "半个西瓜"];
+        
+        // 已解锁的水果状态（内存中记录，页面刷新后重置）
+        const unlockedFruits = new Set();
+        
+        // 生成标签页唯一标识符
+        function generateTabId() {
+            let tabId = sessionStorage.getItem('gameTabId');
+            if (!tabId) {
+                tabId = 'tab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('gameTabId', tabId);
+            }
+            return tabId;
+        }
+        
+        // 当前标签页ID
+        const currentTabId = generateTabId();
+        
+        // 根据合成结果更新滤镜
+        function updateFruitFilter(fruitName, source = 'unknown') {
+            const fruitIndex = fruitNames.indexOf(fruitName);
+            if (fruitIndex !== -1) {
+                const fruitItem = document.querySelector(`#fruit-${fruitIndex}`);
+                if (fruitItem) {
+                    const fruitImage = fruitItem.querySelector('.fruit-image');
+                    if (fruitImage) {
+                        // 移除灰色滤镜，正常显示
+                        fruitImage.classList.remove('fruit-gray');
+                        
+                        // 检查是否为首次解锁
+                        checkAndShowUnlockEffect(fruitName, fruitIndex, source);
+                    }
+                }
+            }
+        }
+
+        // 检查并显示解锁效果
+        function checkAndShowUnlockEffect(fruitName, fruitIndex, source = 'unknown') {
+            const isFirstUnlock = !unlockedFruits.has(fruitIndex);
+            
+            if (isFirstUnlock) {
+                // 记录为已解锁
+                unlockedFruits.add(fruitIndex);
+                
+                // 特殊处理逻辑
+                if (fruitIndex === 0) {
+                    // 第一个水果（葡萄）：直接点亮，无特效
+                    return;
+                } else if (fruitIndex === 9) {
+                    // 最后一个水果（半个西瓜）：点亮+彩色，无撒花特效
+                    console.log('🍉 最后一个水果解锁，点亮但无撒花特效');
+                    return;
+                } else if (source === 'generate') {
+                    // 自动生成的水果：直接点亮，无撒花特效
+                    console.log(`🍎 自动生成水果 ${fruitName} 解锁，直接点亮`);
+                    return;
+                } else if (source === 'merge') {
+                    // 用户合成的水果：显示解锁特效
+                    showUnlockEffect(fruitName, fruitIndex);
+                }
+            }
+        }
+
+        // 显示解锁效果
+        function showUnlockEffect(fruitName, fruitIndex) {
+            const overlay = document.getElementById('unlockOverlay');
+            const fruitImage = document.getElementById('unlockFruitImage');
+            
+            // 动态获取水果图片路径
+            const fruitImagePaths = [
+                buildAssetPath('1.png'),   // 葡萄 (fruit-0)
+                buildAssetPath('2.png'),   // 樱桃 (fruit-1)
+                buildAssetPath('3.png'),   // 橘子 (fruit-2)
+                buildAssetPath('4.png'),   // 柠檬 (fruit-3)
+                buildAssetPath('5.png'),   // 猕猴桃 (fruit-4)
+                buildAssetPath('6.png'),   // 西红柿 (fruit-5)
+                buildAssetPath('7.png'),   // 桃 (fruit-6)
+                buildAssetPath('8.png'),   // 菠萝 (fruit-7)
+                buildAssetPath('9.png'),   // 椰子 (fruit-8)
+                buildAssetPath('10.png'),  // 西瓜 (fruit-9)
+                buildAssetPath('11.png')   // 大西瓜 (fruit-10)
+            ];
+            
+            // 设置水果图片
+            fruitImage.src = fruitImagePaths[fruitIndex] || fruitImagePaths[0];
+            fruitImage.alt = fruitName;
+            
+            // 显示遮罩层
+            overlay.classList.add('show');
+            
+            // 创建撒花特效
+            createConfetti();
+            
+            // 设置自动关闭定时器（3秒）
+            const autoCloseTimer = setTimeout(() => {
+                hideUnlockEffect();
+            }, 3000);
+            
+            // 点击关闭事件
+            overlay.addEventListener('click', function closeHandler(e) {
+                // 清除自动关闭定时器
+                clearTimeout(autoCloseTimer);
+                hideUnlockEffect();
+                // 移除事件监听器，避免重复绑定
+                overlay.removeEventListener('click', closeHandler);
+            });
+        }
+
+        // 创建撒花特效
+        function createConfetti() {
+            // 全屏撒花效果 - 从屏幕顶部开始
+            confetti({
+                particleCount: 200,
+                spread: 100,
+                origin: { y: 0 },
+                zIndex: 10000
+            });
+            
+            // 全屏撒花效果 - 从屏幕中央开始
+            confetti({
+                particleCount: 150,
+                spread: 120,
+                origin: { y: 0.5 },
+                zIndex: 10000
+            });
+            
+            // 全屏撒花效果 - 从屏幕底部开始
+            confetti({
+                particleCount: 100,
+                spread: 100,
+                origin: { y: 1 },
+                zIndex: 10000
+            });
+        }
+
+        // 隐藏解锁效果
+        function hideUnlockEffect() {
+            const overlay = document.getElementById('unlockOverlay');
+            overlay.classList.remove('show');
+        }
+
+        // 通信策略：优先使用PostMessage（iframe通信，天然隔离多标签页）
+        let channel = null;
+        let usePostMessage = true; // 默认使用PostMessage
+        
+        // 检测BroadcastChannel支持情况（作为备用方案）
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                channel = new BroadcastChannel('fruit-merge-channel');
+            } catch (error) {
+                console.warn('BroadcastChannel 初始化失败:', error);
+            }
+        } else {
+            console.log('浏览器不支持 BroadcastChannel，使用 PostMessage 方案');
+        }
+
+        // 消息处理函数
+        function handleMessage(event) {
+            // 验证消息来源标签页ID（避免多标签页干扰）
+            if (event.data.senderTabId && event.data.senderTabId !== currentTabId) {
+                return;
+            }
+            
+            if (event.data.type === 'fruitMerge') {
+                const data = event.data.data;
+                
+                // 更新合成结果的滤镜
+                updateFruitFilter(data.result, data.source || 'merge');
+            } else if (event.data.type === 'fruitGenerate') {
+                const data = event.data.data;
+                
+                // 更新生成水果的滤镜（点亮左侧列表）
+                updateFruitFilter(data.fruitName, data.source || 'generate');
+            }
+        }
+
+        // 监听水果合成和生成消息
+        if (channel) {
+            channel.addEventListener('message', handleMessage);
+        }
+        
+        // PostMessage 主要通信方案（iframe通信，天然隔离多标签页）
+        window.addEventListener('message', function(event) {
+            // 验证消息来源（安全检查）
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            
+            // 验证消息是否来自iframe
+            const iframe = document.getElementById('game-frame');
+            if (iframe && event.source !== iframe.contentWindow) {
+                return;
+            }
+            
+            handleMessage(event);
+        });
+
+        // 页面卸载时关闭频道
+        window.addEventListener('beforeunload', function() {
+            if (channel) {
+                channel.close();
+            }
+        });
+
+        // 防止图片被右键点击、拖拽等操作
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为所有图片添加事件监听器
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                // 防止右键菜单
+                img.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                
+                // 防止拖拽开始
+                img.addEventListener('dragstart', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                
+                // 防止拖拽
+                img.addEventListener('drag', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+                
+                // 防止拖拽结束
+                img.addEventListener('dragend', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+            });
+        });
+    </script>
+
+    <!-- 动态背景设置和iframe参数传递 -->
+    <script>
+        // 全局变量存储当前资源包名称
+        let currentAssetPack = 'merge-melon';
+
+        // 构建动态资源路径的函数
+        function buildAssetPath(filename) {
+            return `assets/${currentAssetPack}/${filename}`;
+        }
+
+        // 格式化素材包名称为标题
+        function formatPackNameToTitle(packName) {
+            return packName
+                .split('-')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // 动态设置背景图片和iframe参数
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentAssetPack = urlParams.get('assets') || 'merge-melon';
+
+            // 设置动态标题
+            const gameTitle = formatPackNameToTitle(currentAssetPack);
+            const titleElement = document.getElementById('dynamic-title');
+            if (titleElement) {
+                titleElement.textContent = gameTitle;
+            }
+
+            // 设置背景图片
+            const backgroundPath = buildAssetPath('background.png');
+            document.body.style.backgroundImage = `url('${backgroundPath}')`;
+
+            // 设置动态favicon
+            const faviconPath = buildAssetPath('favicon.png');
+            const faviconLink = document.getElementById('dynamic-favicon');
+            if (faviconLink) {
+                faviconLink.href = faviconPath;
+            }
+
+            // 传递参数给iframe
+            const iframe = document.getElementById('game-frame');
+            if (iframe) {
+                const iframeSrc = `index-iframe.html?assets=${encodeURIComponent(currentAssetPack)}`;
+                iframe.src = iframeSrc;
+            }
+
+            // 更新所有水果图片路径
+            updateFruitImages();
+        });
+
+        // 更新水果图片路径
+        function updateFruitImages() {
+            for (let i = 0; i < 11; i++) {
+                const fruitImg = document.querySelector(`#fruit-${i} img`);
+                if (fruitImg) {
+                    fruitImg.src = buildAssetPath(`${i + 1}.png`);
+                }
+            }
+        }
+    </script>
+
+    <!-- 撒花特效库 -->
+    <script src="src/confetti.js"></script>
+</body>
+</html>

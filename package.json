@@ -1,0 +1,23 @@
+{
+  "name": "daxigua-onefile-assets-processor",
+  "version": "1.0.0",
+  "description": "Asset processing tool for daxigua-onefile game assets",
+  "main": "process-assets.js",
+  "scripts": {
+    "process": "node process-assets.js",
+    "process:all": "node process-assets.js",
+    "help": "echo 'Usage: npm run process [asset-pack-name] or node process-assets.js [asset-pack-name]'"
+  },
+  "dependencies": {
+    "canvas": "^3.1.0",
+    "sharp": "^0.34.2"
+  },
+  "keywords": [
+    "game",
+    "assets",
+    "image-processing",
+    "daxigua"
+  ],
+  "author": "",
+  "license": "ISC"
+}
