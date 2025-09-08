@@ -1,9 +1,9 @@
 // GitHub OAuth 配置
 const GITHUB_CONFIG = {
-    clientId: 'YOUR_GITHUB_CLIENT_ID', // 需要替换为实际的 Client ID
-    redirectUri: window.location.origin + '/daxigua-onefile/auth-callback.html',
+    clientId: 'Ov23liS8Q7uLRb5OsD9s', // 需要替换为实际的 Client ID
+    redirectUri: window.location.origin + '/auth-callback.html',
     scope: 'repo',
-    repo: 'YOUR_USERNAME/YOUR_REPO_NAME' // 需要替换为实际的仓库
+    repo: 'mj931554665/daxigua' // 您的仓库
 };
 
 // 全局变量
@@ -455,7 +455,7 @@ async function uploadToGitHub(processedFiles, packId) {
 
 // 上传单个文件到 GitHub
 async function uploadSingleFile(fileName, base64Content, packId) {
-    const url = `https://api.github.com/repos/${GITHUB_CONFIG.repo}/contents/daxigua-onefile/assets/${packId}/${fileName}`;
+    const url = `https://api.github.com/repos/${GITHUB_CONFIG.repo}/contents/assets/${packId}/${fileName}`;
     
     const response = await fetch(url, {
         method: 'PUT',
@@ -510,7 +510,7 @@ function hideProgress() {
 
 // 显示结果
 function showResult(packId) {
-    const gameUrl = `${window.location.origin}/daxigua-onefile/index.html?assets=${packId}`;
+    const gameUrl = `${window.location.origin}/index.html?assets=${packId}`;
     
     document.getElementById('packId').textContent = packId;
     document.getElementById('gameLink').href = gameUrl;

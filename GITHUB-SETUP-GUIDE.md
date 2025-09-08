@@ -42,7 +42,8 @@ git push -u origin main
    ```
 3. 点击 "Register application"
 4. 记录 **Client ID** 和 **Client Secret**
-
+Ov23liS8Q7uLRb5OsD9s
+ea85624a69cdaad2da9d5d947e29b4d9c85bd493
 ### 3. 配置代码
 
 #### 修改 upload.js 配置

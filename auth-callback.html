@@ -74,7 +74,7 @@
                 
                 // 临时方案：跳转回上传页面并提示用户输入 token
                 setTimeout(() => {
-                    window.location.href = '../upload.html?auth=callback&code=' + code;
+                    window.location.href = '/upload.html?auth=callback&code=' + code;
                 }, 2000);
                 
             } catch (error) {
@@ -86,7 +86,7 @@
                 
                 // 3秒后跳转回登录页面
                 setTimeout(() => {
-                    window.location.href = '../upload.html';
+                    window.location.href = '/upload.html';
                 }, 3000);
             }
         }
